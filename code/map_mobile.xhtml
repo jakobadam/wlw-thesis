@@ -1,0 +1,36 @@
+{% extends "base_mobile.xhtml" %}
+
+{% block nav_map %}Map{% endblock %}
+{% block nav_map_bottom %}Map{% endblock %}
+
+{% block body %}
+<div>
+	<img src="{{static_map_uri}}" alt="spots map" />
+	<a href="?{{qs_zoomed}}">Zoom in</a>&nbsp;<a href="?{{qs_zoomed_out}}">Zoom out</a>	
+</div>
+
+{% if spots %}
+<h3>Spots</h3>
+<ol>{% for s in spots %}
+	<li>
+		<p>
+			<a href="{{s.get_absolute_url}}?output=mobile&amp;{{qs}}">{{s.name}}</a>
+			<a href="?clat={{s.point.lat}}&amp;clon={{s.point.lon}}&amp;spots={{s.key.name}}&amp;{{qs}}">
+				<img alt="center spot" src="/images/magnifier.png" />
+			</a>
+		</p>
+	</li>
+{% endfor %}	
+</ol>
+{% endif %}
+
+{% if wss %}
+<h3>Weather Station</h3>
+<ol>{% for w in wss %}
+	<li>
+		<a href="{{w.get_absolute_url}}?output=mobile&amp;{{qs}}">{{w.name}}</a>
+	</li>
+	{% endfor %}
+</ol>
+{% endif %}
+{% endblock %}

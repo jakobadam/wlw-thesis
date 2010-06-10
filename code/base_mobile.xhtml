@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">
+<html xmlns='http://www.w3.org/1999/xhtml'>
+  <head>
+    <title>We Love Wind (Mobile)</title>
+  </head>
+  <body>
+    <h2>We Love Wind</h2>
+    {% block nav %}
+    <div id="navigation">
+      <a href="/mobile/">Search</a>
+      
+      &nbsp;|&nbsp;
+      
+      {% block nav_map %}
+      <a href="{{map_uri}}&amp;{{qs}}">Map</a>
+      {% endblock %}
+      
+      &nbsp;|&nbsp;
+      
+      {% block nav_con %}
+      <a href="/mobile/info/?{{qs}}">Conditions</a>
+      {% endblock %}
+      
+    </div>
+    {% endblock %}<hr/>
+    {% block body%}{% endblock %}
+    
+    {% block nav_bottom %}
+    <hr/>
+    <div id="navigation_buttom">
+      <a href="/mobile/">Search</a>
+      
+      &nbsp;|&nbsp;
+      
+      {% block nav_map_bottom %}
+      <a href="{{map_uri}}&amp;{{qs}}">Map</a>
+      {% endblock %}
+      
+      &nbsp;|&nbsp;
+      
+      {% block nav_con_bottom %}
+      <a href="/mobile/info/?{{qs}}">Conditions</a>
+      {% endblock %}
+      
+    </div>
+    {% endblock %}
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{% extends "base_mobile.xhtml" %}
+{% block nav%}{% endblock %}
+{% block nav_bottom %}{% endblock %}
+
+{% block body %}
+	<form action="/mobile/geo">
+		<fieldset>
+			<label for="location">Get spots and weather info for location:</label>	
+			
+			<input id="location" name="location" type="text" value="{% if latest_address %}{{latest_address}}{% else %}Aarhus, dk{% endif %}" />
+			<input type="submit" value="Search" />
+		</fieldset>
+	</form>
+{% endblock%}

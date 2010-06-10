@@ -1,0 +1,53 @@
+{% extends "base_mobile.xhtml" %}
+{% load datetime_filters %}
+{% load inclusion_tags %}
+
+{% block nav_con %}Conditions{% endblock %}
+{% block nav_con_bottom %}Conditions{% endblock %}
+
+{% block body %}
+	<h3>Weather Stations near {{address}}</h3>
+	{% if wss %}
+		<table>
+		{% for w in wss %}
+			<tr>
+				<td>
+					<a href="{{ w.get_absolute_url }}?output=mobile&amp;{{qs}}">{{ w.name}}</a>
+				</td>
+			{% if w.current_conditions %}
+				{% weather_data_as_td w.current_conditions %}
+				<td>{{ w.current_conditions.time|timesince}} ago</td>
+			{% endif %}
+			</tr>
+		{% endfor %}
+		</table>
+	{% else %}
+	No weather stations around.
+	{% endif %}
+	<hr />
+	<h3>Spots near {{address}}</h3>
+	{% if spots %}
+	<table>{% for s in spots %}
+		<tr>
+			<td><a href="{{s.get_absolute_url}}?output=mobile&amp;{{qs}}">{{s.name}}</a></td>
+			<td>{{s.forecast_point.current_conditions_as_object.to_local_time|dtformat}}</td>
+			<td>{% weather_data_as_td s.forecast_point.current_conditions_as_object %}</td>
+		</tr>
+		{% endfor %}
+	</table>
+	{% else %}No spots around.{% endif %}
+	<hr />
+	<h3>Forecast near {{address}}</h3>
+	<table>
+		{% for wd in fp.get_forecasts_as_objects %}
+		<tr>
+			<td>{{wd.time|timeuntil}}</td>
+			{% weather_data_as_td wd %}
+		</tr>
+		{% endfor %}
+	</table>
+	
+	<p>Forecast calculated {{fp.calculation_time|timesince}} ago</p>
+
+{% endblock %}		
+
