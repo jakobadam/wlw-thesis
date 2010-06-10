@@ -629,7 +629,7 @@ is bypassed by accessing the \verb|raw_post_data| member of the request, used
  in the \verb|_load_post_data| that parses data according to the
 type of the content: JSON or uri-encoded.
 
-\lstinputlisting[caption=REST controller,label=lst:rest_controller]{../implementation/wlw/wlw/controllers/rest_controller.py}
+\lstinputlisting[caption=REST controller,label=lst:rest_controller]{code/restcontroller.py}
 
 With the base controller in place we now turn to implementing the concrete
 controllers of the resources; all inheriting from the REST controller.
