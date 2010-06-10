@@ -1,0 +1,366 @@
+\documentclass{book}
+\usepackage[latin1]{inputenc}	 % Allow danish letters
+\usepackage[american]{babel}	 % US-english hyphenation patterns.
+\usepackage{a4}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}		 % Allow graphics in the document
+\usepackage{calc}
+\usepackage[draft]{fixme}	 % Generates "FiXME" tags
+\usepackage{varioref}            % References with page info
+\usepackage[pdftex]{hyperref}    % Special PDF features
+\usepackage{courier}	         % Replaca std monospace text with the PostScript font Adobe Courier.
+\usepackage{url}	         % Nicely format and linebreak URLs 
+\usepackage[avantgarde]{quotchap}% Huge Chapter numbers
+\usepackage[number=none]{glossary}
+\usepackage{array,booktabs}      % Nice tables
+\usepackage{rotating}            % Rotating table
+\usepackage{tabularx}            % Auto adjusting tables
+\usepackage{fancyvrb}            % verb in footnotes
+\makeglossary
+            
+%% Make sure that the bibliography is listed in the table of contents,
+%% but that the table of contents itself is not.
+\usepackage[nottoc]{tocbibind}	
+\usepackage[font=small,         % Nicer formatting of figure captions.
+  format=plain,labelfont=bf,up,textfont=it,up]{caption}
+\usepackage[square]{natbib} 	% Use the "Natbib" style for the references in the Bibliography 
+
+\bibliographystyle{authordate1} % Use the given BibTeX style for formatting the Bibliography 
+\usepackage{vector} 
+\usepackage{color} 		% Color for listings
+
+%% Colors
+\definecolor{nicered}{rgb}{.647,.129,.149}
+\definecolor{niceyellow}{rgb}{1,1,.85}
+\definecolor{nicegrey}{rgb}{0.156,0.1,0.1}%
+
+\usepackage{listings}
+\lstloadlanguages{Python,SQL}
+\definecolor{niceblue}{rgb}{0.34,0.39,0.39} % schmutzig-gelb
+\lstset{language=Python,           % Listings setup
+	captionpos=b,
+	basicstyle=\ttfamily\small,
+	breaklines=true,
+        showspaces=false,
+        commentstyle=\itshape\ttfamily,
+        keywordstyle={\bfseries\ttfamily\color{nicered}},
+        stringstyle={\ttfamily\color{nicegrey}},
+	commentstyle={\ttfamily\itshape\color{nicegrey}},
+        showstringspaces=false,
+        %frameround=fttt,
+	aboveskip=\bigskipamount,
+        belowskip=\bigskipamount,
+        frame=bt,
+	backgroundcolor=\color{niceyellow}}
+
+\VerbatimFootnotes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Redefinitions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\renewcommand{\ttdefault}{cmtt}
+%%\let\cleardoublepage\clearpage
+
+%% Define a new 'leo' style for the package that will use a smaller font.
+\makeatletter 
+\def\url@leostyle{%
+  \@ifundefined{selectfont}{\def\UrlFont{\sf}}{\def\UrlFont{\small\ttfamily}}}
+\makeatother
+
+\urlstyle{leostyle}		% Now actually use the newly defined style.
+
+\makeatletter
+
+%% Redefitions of section styles
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+                                   {-3.5ex plus -1ex minus -.2ex}%
+                                   {2.3ex plus .2ex}%
+                                   {\normalfont\Large\bfseries\color{nicered}}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+                                     {-3.25ex plus -1ex minus -.2ex}%
+                                     {1.5ex plus .2ex}%
+                                     {\normalfont\large\bfseries\color{nicered}}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+                                     {-3.25ex plus -1ex minus -.2ex}%
+                                     {1.5ex plus .2ex}%
+                                     {\normalfont\normalsize\bfseries\color{nicered}}}
+\makeatother
+
+\graphicspath{{Figures/}}	% Location of the graphics files
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% My DRAFT heading ... uncomment until final version
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% \makeatletter
+%% \renewcommand{\ps@plain}{%
+%%   \renewcommand{\@oddhead}{\hfil\fbox{DRAFT --- \today}\hfil}%
+%%   \renewcommand{\@evenhead}{\@oddhead}%
+%%   \renewcommand{\@oddfoot}{\hfil\thepage\hfil}%
+%%   \renewcommand{\@evenfoot}{\@oddfoot}}
+%% \makeatother
+\pagestyle{plain}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% New environments and theorems
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newenvironment{publist}[1]%
+{\begin{list}{}{\renewcommand{\makelabel}[1]{\hfil##1\hspace{.1em}}%
+    \settowidth{\labelwidth}{#1\hspace{.1em}}%
+    \setlength{\leftmargin}{\labelwidth+\labelsep}}}%
+{\end{list}}
+
+\newenvironment{myabstract}
+{\small\begin{center}\bf\abstractname\vspace{-0.5em}\end{center}\quotation}
+{\endquotation}
+\newenvironment{proof}[1][] {\noindent\emph{Proof#1.}\hspace{0.5em}}
+{\hspace{\fill}$\Box$\vspace{0.3cm}}
+\newtheorem{problem}{Problem}[chapter]
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}{Lemma}[chapter]
+\newtheorem{corollary}{Corollary}[chapter]
+\newtheorem{scenario}{Scenario}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% New commands
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\todo}[1]
+{\marginpar{\baselineskip0ex\rule{2,5cm}{0.5pt}\\[0ex]{\tiny\textsf{#1}}}}
+\newcommand{\remark}[1]{\textsf{[#1]}}
+\newcommand{\mytitle}[3]{
+  {\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+    \vspace*{2\baselineskip}
+    \begin{center}
+      {\LARGE #1}\par\vskip2em
+      {\large\lineskip.5em\begin{tabular}[t]{c}#2\end{tabular}}
+    \end{center}
+    \vskip1.5em #3}}
+
+\newcommand{\mycitation}[2]{
+  {\begin{flushright}
+      \emph{#1} \\ 
+      \textrm{--- #2}
+    \end{flushright}}}
+
+\newcommand{\clearemptydoublepage}{\newpage{\pagestyle{empty}\cleardoublepage}}
+
+\newcommand{\shortpage}{\enlargethispage{-\baselineskip}}
+\newcommand{\longpage}{\enlargethispage{\baselineskip}}
+\newcommand{\compresspage}{\enlargethispage*{0\baselineskip}}
+\renewcommand{\topfraction}{1}
+\renewcommand{\floatpagefraction}{1}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Front pages
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\pagestyle{empty} 
+\pagenumbering{roman} 
+%\setcounter{secnumdepth}{-1}
+\vspace*{\fill}
+
+\begin{flushright}
+  {\Huge\sf A Web-Based Weather Service}\\[2ex]
+  {\Huge\sf for Wind Sports}\\[3ex]
+  {\huge\sf Jakob Aarøe Dam}\\[3ex]
+  {\sf Supervised by Olivier Danvy}
+\end{flushright}
+\noindent\rule{\linewidth}{1mm}\\[-.5ex]
+\vfill
+\begin{center}
+  {\huge\sf Master's Thesis}\\[\fill]
+  \includegraphics[scale=1.3]{logo_grey.pdf}\\[\fill]
+  {\sf 3 July 2009\\Department of Computer Science\\Aarhus University\\Denmark}
+\end{center}
+\vspace*{\fill}
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Abstract
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\newpage{\pagestyle{empty}\cleardoublepage}
+\pagestyle{plain}
+
+\chapter*{{\Huge Abstract}}
+\addcontentsline{toc}{chapter}{Abstract} We describe the foundations, design, and
+implementation of a mashup that assists practitioners of wind sports. The problem
+consists of three parts: (1) obtaining weather forecasts and weather observations
+from weather resources; (2) creating Web Services that serve representations of
+relevant data; and (3) creating a Web Service client that presents the data in a
+comprehensible matter for users.
+
+We present the theoretical foundations for creating scalable Web
+Services. The theoretical foundations consist of Roy Fielding's
+architectural style, Representational State Transfer (REST), and of
+Leonard Richardson and Sam Ruby's concrete Web Service architecture, the
+Resource Oriented Architecture that is subject to the architectural
+constraints of REST.  
+
+We use the Google App Engine (GAE) as the platform for the Web Service. Using GAE
+for geographical spatial data demands that space-filling curves are applied to
+map from multi-dimensional data, e.g., latitude and longitude, to a
+one-dimensional value that can be indexed by GAE. Geohash is presented and used
+in a scalable solution that serves location-based information on a
+proximity basis. In addition, we present a solution that circumvents the
+geohashing limitations regarding proximity searches across boundaries.
+
+We illustrate how the Web Service is used by describing the design and
+implementation of a location-based Ajax front-end that presents weather
+information relevant in the context of wind sports.
+
+\vspace*{\fill}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Conventions and Acknowledgements
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter*{{\Huge Acknowledgements}} 
+\addcontentsline{toc}{chapter}{Acknowledgements} This last half
+year creating my `Speciale' has been a fantastic ride uniting two of my passions:
+computer science and kite surfing. I am grateful to Olivier Danvy for making it
+possible by seeing potential and believing in my thesis, even before I did
+myself, and for giving keen advice and comments on the dissertation.
+
+I owe a great deal of thanks to Brian Jensen and Jens Rimestad for proof reading
+this dissertation. I also thank them and Jacob Sloth Mahler-Andersen for fruitful
+visions, comments, and feedback on the design and functionality of this weather
+service for wind sports and, for many great hours kite surfing on the
+water, however rarer these hours have become lately.
+
+I owe great thanks to Michael Glad, for setting up the infrastructure to run
+a Web Service here at DAIMI and for bringing this infrastructure back online outside working
+hours and with an outstanding celerity when a software update caused it to fail; to
+John Kruuse for conjuring up the otherwise hidden article ``Virtues of
+Haversine'' from the archives of Statsbiblioteket; to Gerth Stølting Brodal and
+Lasse Deleuran for listening to me talking about geohash and for pointing me
+towards space-filling curves as the natural generalization of geohash; and to
+Mogens Dam for always being helpful and for expertly introducing me to spherical
+geometry.
+
+I am also thankful to the providers of weather data: the Danish Coastal
+Authority, the Danish Meteorological Institute, the National Oceanic and
+Atmospheric Administration, and WeatherBug; without them my thesis would have
+been unrealistic and unprovable.
+
+Finally, thanks to my family for their never-ending love and support, and to my
+girlfriend for her support, for bearing with my long hours of work, and
+for bringing into my life happiness, love, and perspective.
+
+\vspace{2ex}
+\begin{flushright}
+  \emph{Jakob Aarøe Dam,}\\
+  \emph{Århus, July 3, 2009.}
+\end{flushright}
+
+%\newpage{\pagestyle{empty}\cleardoublepage}
+\chapter*{{\Huge Typographical conventions}}
+The following conventions are used in this dissertation: 
+\begin{itemize}
+  \item In each chapter, \textit{italic} fonts emphasize words or mark terms that
+  are described in the glossary. The first occurrence of each such term is in
+  \textit{italics}. The subsequent occurrences are not emphasized.
+  \item \verb|teletype| fonts indicate computer code either inlined in the text
+  or in listings; code is everything from concrete program code to urls and file
+  names. In listings \verb|(...)| indicates that code is omitted for brevity. In
+  addition, most Python imports are left out for brevity.
+
+  Sometimes in listings we reproduce a transcript of a session with the Python
+  interpreter, as in Listing~\ref{lst:python_inter}. 
+\end{itemize}
+
+\begin{lstlisting}[caption=Transcript of a Python session, label=lst:python_inter]
+>>> import geohashneighbors as ghn
+>>> import geohash
+>>>
+>>> london = geohash.Geohash((0, 51))
+>>> str(london)
+'u1040h2081040'
+>>> ghn.neighbors('u10')
+['u12', 'u13', 'u11', 'u0c', 'u0b', 'gbz', 'gcp', 'gcr']
+\end{lstlisting}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Table of contents
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearemptydoublepage
+\tableofcontents
+\clearemptydoublepage
+%\pagenumbering{arabic}
+
+\renewcommand{\chaptermark}[1]{\markboth{\textit{\chaptername\
+      \thechapter. #1}}{}} 
+\renewcommand{\sectionmark}[1]{\markright{\textit{\thesection. #1}}}
+
+%% ----------------------------------------------------------------
+\mainmatter	  	     % Begin normal, numeric (1,2,3...) page numbering
+
+\input{./Chapters/definitions}
+
+%\input{./Chapters/Chapter1} % Introduction
+
+%\input{./Chapters/Chapter2} % Get me some data
+
+%\input{./Chapters/Chapter3} % Development of the user interface
+
+%\input{./Chapters/Chapter4} 
+
+\input{./Chapters/introduction}
+
+\input{./Chapters/foundations_webservices}
+
+\input{./Chapters/foundations_clients}
+
+\input{./Chapters/foundations_gae}
+
+\input{./Chapters/ws_resources}
+
+\input{./Chapters/ws_gae}
+
+\input{./Chapters/ws_daimi}
+
+\input{./Chapters/client_forecasts}
+
+\input{./Chapters/client_observations}
+
+\input{./Chapters/client_ajax}
+
+\input{./Chapters/client_mobile}
+
+\input{./Chapters/Conclusion}
+
+%\input{./Chapters/info}
+
+%% ----------------------------------------------------------------
+% Now begin the Appendices, including them as separate files
+
+\addtocontents{toc}{\vspace{2em}} % Add a gap in the Contents, for aesthetics
+
+\appendix % Cue to tell LaTeX that the following 'chapters' are Appendices
+
+\input{./Chapters/Glossary}
+
+\input{./Appendices/AppendixA}	% Appendix Title
+
+%\input{./Appendices/Appendix_ws_imp}
+
+\input{./Appendices/AppendixMobile}
+
+\input{./Appendices/appendix_ws_resources}
+
+\addtocontents{toc}{\vspace{2em}}  % Add a gap in the Contents, for aesthetics
+\backmatter
+
+%% ----------------------------------------------------------------
+\label{Bibliography}
+\bibliography{Bibliography}  % The referen (bibliography) information are stored in the file named "Bibliography.bib"
+
+\end{document}

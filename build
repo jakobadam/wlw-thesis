@@ -1,0 +1,7 @@
+#!/bin/sh
+
+pdflatex thesis.tex
+makeindex thesis.glo -s thesis.ist -t thesis.glg -o thesis.gls
+bibtex thesis
+pdflatex thesis.tex
+pdflatex thesis.tex

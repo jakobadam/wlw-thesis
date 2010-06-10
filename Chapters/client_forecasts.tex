@@ -1,0 +1,478 @@
+\part{The Clients}
+%% A Web Service client is the consumer of a Web Service. This part of the
+%% dissertation describes the design and implementation of clients that consume the
+%% Web Services described in the last part.
+
+%% There are two clients meant for user consumption: the main front-end ()of the
+%% application manifested in an Ajax client and a supplementary front-end manifested
+%% in a Django client. The former is apt for standard computer whereas the latter is
+%% apt for mobiles.
+\begin{savequote}[10pc]
+\sffamily
+``It is a capital mistake to theorize before one has data.''
+\qauthor{Sherlock Holmes, Sir Arthur Conan Doyle (1859 -- 1930)}
+\end{savequote}
+\chapter{Weather data}\label{chap:forecasts}
+
+\section{Getting weather data}\label{sec:getting_weather_data}
+The resources incorporate weather data -- forecasts and observations -- from four
+external resources: DCA, DMI, WB, and NOAA. The weather data must be up to data
+when the user requests the information. None of the sources provide JSON(P) 
+Web Services therefore we must either use the GAE as a proxy or save the data
+locally and periodically update the content. 7 April 2009 Google announced
+support for scheduling cron
+jobs\footnote{\url{http://code.google.com/p/googleappengine/issues/detail?id=6}},
+giving three options for keeping the data up to date: either update the data
+\begin{enumerate}
+  \item by an internal cron job at the GAE;
+  \item on-demand upon user HTTP requests; or,
+  \item by an external cron job.
+\end{enumerate}
+%%
+\textit{Internal cron jobs:} The natural choice would be an internal cron job at
+the GAE, making the GAE responsible for consuming weather data from the external
+resources at regular intervals. The cron jobs at Google are limited to the same
+constraints as usual HTTP requests, e.g., the request duration limit. In
+addition, the number of jobs are limited to 20, and at minimum there must be one
+minute between individual cron jobs \citep{Google:cron}. With hundreds of weather
+stations a naive cron job times out, and the changes done in the transaction are
+rolled back. Since it is possible to execute cron jobs every minute, a workaround
+is to limit the number of processed weather stations. Every data retrieval lasts
+about one second which means that about 20 resources can be processed per minute
+under the request duration limit. Weather stations are updated ca. every 20
+minutes, which yields only 400 stations that can be updated on a continuously
+basis per cron jobs, and which makes this approach infeasible.  \\\\
+\textit{On-demand:} By on-demand we mean weather data is updated just-in-time
+when the user needs the weather data. Because of the request duration limit the
+approach would include requests from JavaScript at the client side for every
+resource of interest, and the controller would update the GAE version of the
+weather data if it is stale. The approach, however, includes a significant
+latency. Getting weather data must be a low latency operation making the approach
+infeasible.\footnote{GAE is an emerging technology. A promising GAE offering
+(announced 18 June 2009) is the Task Queue. The Task Queue process tasks
+independently of the originating request. The only problem is getting the updated
+information back to the user, and not just to the next user accessing the
+page. Such a requirement is typically realized with Comet (or Ajax Push),
+however, this is not supported on GAE. If (or when) it is supported the Task
+Queue together with Comet is a solution for the update problem.}  \\\\
+\textit{External cron jobs:} The last option is letting external cron jobs pull
+weather data from all the weather resource and push the data to the GAE. The
+external updaters are tightly coupled to the GAE in a point-to-point solution
+with much redundant data transfer, however, it is the best of the worst at the
+moment.
+
+\section{Weather Observations}\label{chap:observations}
+Unfortunately we have no Swiss Army Knife for the problem of pulling information
+from the different sources. The resources are diverse and in different formats;
+therefore, each case is handled on an individual basis. 
+
+\subsection{Scraping DMI and DCA}
+The only option to get weather data from DCA and DMI is by scraping their Web
+pages for content. Web scraping is the process of programmatically retrieving
+content from a Web page meant for human consumption. The data at DCA is
+inaccessible as a Web Service, but DCA has agreed to let their pages be accessed
+by our Web Scraper in order to retrieve the data.
+
+DMI prohibits incorporation of their data in other sites. The author has several
+times asked DMI for a collaboration, however, un-successful. We might be crossing
+ethical boundaries, but, we have decided to Web scrape their site, just like
+Google does.
+
+Content in the case of DCA is located at sub-pages on a station and data type
+basis (speed, direction, and temperature are located at different pages). Content
+at DMI is located in sub-pages on a weather station basis. 
+
+All resources are invalid HTML and will cause an XML parser to fail. This is a
+case where Beautiful
+Soup\footnote{\url{http://www.crummy.com/software/BeautifulSoup/}}, a Python
+module to Web scrape Web pages, has a great force; to quote their Web page:
+%
+\begin{quote}
+\footnotesize\itshape
+You didn't write that awful page. You're just trying to get some data out of
+it. Right now, you don't really care what HTML is supposed to look like.\\
+\\
+Neither does this parser.
+\end{quote}
+%
+Scraping the latest speed, direction, temp, and time from DMI Aarhus, the code in
+Listing~\ref{lst:dmiscraper} is all that is needed (after downloading the
+BeautifulSoup module).
+
+\begin{lstlisting}[caption=DMI Web scraper, label=lst:dmiscraper]
+months = ['', 'januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'septempber', 'oktober', 'november', 'december']
+
+def _scrape(ws):
+    page = urlopen(ws['uri_scrape']).read()
+    soup = BeautifulSoup(page)
+
+    # all text from page
+    text = soup.findAll(text=True)
+
+    # time
+    contents = text[6].split()
+    day = int(contents[2].strip('.'))
+    month = int(months.index(contents[3])) # januar -> 1
+    year = int(contents[4])
+    hour = int(contents[5].split(':')[0])
+    minute = int(contents[5].split(':')[1])
+    dt = datetime(year, month, day, hour, minute)
+    iso_time_utc = convert_local_time_to_utc(dt.timetuple())
+
+    # wind
+    contents = text[7].split()
+    direction = float(contents[1])
+    speed = float(contents[3])
+
+    # temp
+    contents = text[8].split()
+    temp = float(contents[1])
+
+    return {'time':iso_time_utc, 'direction':direction, 'temp':temp, 'speed':speed}
+
+def convert_local_time_to_utc(time_tuple):
+    secs = time.mktime(time_tuple)
+    utc = time.gmtime(secs)
+    iso = time.strftime("%Y-%m-%dT%H:%M:%S", utc)
+    return iso
+
+if __name__ == '__main__':
+    print _scrape({'uri_scrape':'http://servlet.dmi.dk/bv/servlet/bv?stat=6074'})
+\end{lstlisting}
+%
+In the example we use the Python library \verb|urllib2| to fetch the page. This
+is given as an argument to BeatifulSoup when it is instantiated. The
+\verb|BeautifulSoup| class has many methods that assist in extracting relevant
+data from the page; we use the \verb|findAll| method to find all elements, and
+extract content from that list.
+
+Scraping DCA's site is similar except that it needs tailoring for the specific
+layout of that site. 
+
+The Web scraper is fragile to modifications in the user interface, e.g.,
+modification to the placement of the different data, but we have no other option
+to retrieve the data.
+
+\subsection{Scraping WB}\label{client:weatherbug}
+In contrast to the ill-formed data from DCA the data from WB is in XML formats,
+and therefore more apt for computer consumption. Listing~\ref{lst:weatherbug_rss}
+shows an example of a WB XML document. The documents are subject to a single
+operation: extraction of node content and node attribute values.
+
+From an abstract viewpoint, there are two types of XML parsers: tree-based
+parsers and event-based parsers. Tree-based parsers read in the whole XML
+document at once and create an internal data structure, while event-based parsers
+consider XML documents as a stream of events serially generating events while
+parsing the document. In the previous section, we used a tree-based parser,
+BeautifulSoup. The advantages of event-based frameworks over tree-based are that
+they are fast and efficient since they avoid building a tree data structure;
+the advantage, however, is at the expense of simplicity in the programming model.
+
+XML parsing of WB data merely has the purpose of extracting content of specific
+nodes: the application does not call for any transformations, and not for
+processing dependent on former seen nodes, and not for fixing invalid XML;
+therefore, we choose the event-based parser, SAX.\footnote{The Python standard
+library contains both types of XML parsers: tree-based, manifested in the
+Document Object Model\footnote{\url{http://docs.python.org/library/xml.dom.html}}
+(DOM), and event-based, manifested in the Simple API for
+XML\footnote{\url{http://docs.python.org/library/xml.sax.html}} (SAX).}
+
+\begin{lstlisting}[caption=WeatherBug Weather RSS feed for weather station Tirstrup Airport,label=lst:weatherbug_rss]
+(...)
+  <aws:station requestedID="EKAH" id="EKAH" 
+    name="Tirstrup Airport" 
+    city="Tirstrup"  state="Denmark" 
+    citycode="60090" country="Denmark" 
+    latitude="56.2999992370605" 
+    longitude="10.6166667938232" />
+  <aws:current-condition 
+    icon="http://deskwx.weatherbug.com/images/Forecast/icons/cond024.gif">
+    Mostly Cloudy
+  </aws:current-condition>
+  <aws:temp units="&amp;deg;C">9.0</aws:temp>
+  <aws:rain-today units="mm">0.00</aws:rain-today>
+  <aws:wind-speed units="km/h">22</aws:wind-speed>
+  <aws:wind-direction>ESE</aws:wind-direction>
+  <aws:gust-speed units="km/h">21</aws:gust-speed>
+  <aws:gust-direction>ESE</aws:gust-direction>
+</aws:weather>
+(...)
+<pubDate>Wed, 15 Apr 2009 13:50:00 GMT</pubDate>
+(...)
+\end{lstlisting}
+
+%% http://api.wxbug.net/getStationsXML.aspx?ACode=A5580954882&lat=56.15&long=10.21
+
+Parsing with Python SAX is done by inheriting from the class
+\verb|ContentHandler| and overwriting relevant methods. The methods correspond to
+events generated when SAX parses the document.
+
+A generic content handler that extract content must overwrite three methods in
+the \verb|ContentHandler|: \verb|startElement|, \verb|endElement|, and
+\verb|characters|. During parsing the \verb|startElement| method is called for
+every XML start tag, the \verb|endElement| method is called for every XML end
+tag, and the \verb|characters| method is called for each chunk of character
+data.\footnote{For more info see \url{http://docs.python.org/library/xml.sax.handler.html}}
+
+Listing~\ref{lst:sax_xmlparser} shows the code for the XML parser. The parser is
+instantiated with a list of the type of XML elements from which to retrieve the
+content. The parser keeps track of when it is inside relevant nodes with the
+\verb|in_element| variable. The relevant node content is put in a dictionary of
+XML-element keys and node content values.
+
+% XML SAX Parser 
+\lstinputlisting[caption=SAX XML parser,label=lst:sax_xmlparser]{../implementation/wlw/wlw/helpers/xmlparser.py}
+
+Extracting the content of the RSS feed is now just a matter of picking the
+elements to retrieve the node content from, and parsing the XML string with the
+content handler, the code is shown in Listing~\ref{lst:weatherbug_scrape}.
+
+\begin{lstlisting}[caption=Extracting XML content from WB station RSS feed,label=lst:weatherbug_scrape]
+XML_ELEMENTS = ['aws:temp', 'aws:wind-speed', 'aws:wind-direction','aws:gust-speed', 'aws:gust-direction', 'pubDate']
+
+def _scrape(ws):
+    response = urllib2.urlopen(ws['uri_scrape']).read()
+    values = {}
+    parseString(response, XMLParser(values, XML_ELEMENTS))
+
+    time = convert_local_time_to_utc(parse_wb_time(values['pubDate']))
+    temp = parse_float(values.get('aws:temp'))
+    gust = parse_float(values.get('aws:gust-speed'))
+    direction = values.get('aws:wind-direction')
+    speed = parse_float(values.get('aws:wind-speed'))
+
+    if speed:
+        speed = speed / 3.6 # from km/h to m/s
+
+    if gust:
+        gust = gust / 3.6
+
+    if direction:
+        direction = convert_direction(direction)
+
+    return {'time':time, 'direction':direction, 'temp':temp, 'speed':speed, 'gust':gust}
+
+    (...)
+
+if __name__ == '__main__':
+    print _scrape({'uri_scrape':'http://api.wxbug.net/getLiveCompactWeatherRSS.aspx?ACode=A5580954882&stationid=ETGG&unittype=1'})
+\end{lstlisting}
+
+\subsection{Integrating with the Web Service}
+Web scraping the three types of weather stations is a similar process: 
+\begin{enumerate}
+  \item fetch all weather stations of a certain type from the Web Service; and
+  for all weather stations,
+  \item scrape it and post the new data to the Web Service.
+\end{enumerate}
+The only difference between the weather station types are in the concrete
+scraping code. Therefore, we apply the template method pattern \citep{Gamma:1995}
+and create a general scraper skeleton, deferring the concrete scraping code to
+its subclasses.
+
+\verb|update_weather_data| is the template method, shown in
+Listing~\ref{lst:scraper}, that implements the process described above.
+\verb|_scrape| is the deferred method, it uses the \verb|scrape_uri| from the
+fetched representation and returns the scraped data as a simple Python object
+compatible with the observation representation format
+(see~\vref{lst:obs_res}). \verb|_update_server| converts the object to JSON, sets
+the content type (used by the controller in the Web Service), and post the
+representation to the server. \verb|_scrape| continues recursively if the
+paginator contains more pages. The individual \verb|_scrape| methods were
+presented in the last section and fit directly into the skeleton when they are
+put in a class that inherits from \verb|Scraper|.
+
+\begin{lstlisting}[caption=Common Web scraper,label=lst:scraper]
+URI_BASE = 'http://www.welovewind.com'
+URI_WEATHER_STATIONS = 'http://www.welovewind.com/api/weather_stations/'
+class Scraper:
+
+    def __init__(self, type):
+        '''Craete instance of scraper
+        Args:
+          type: weather station type ('dmi'|'wb'|'dca')
+        '''
+        self.type = type
+
+    def update(self):
+        self.update_weather_data(URI_WEATHER_STATIONS + '?type=%s' % self.type)
+
+    def update_weather_data(self, uri):
+        '''Template method'''
+        wss = self._fetch_weather_stations(uri)
+        for ws in wss['items']:
+            data = self._scrape(ws)
+
+            # update server
+            uri = '%s%s' % (URI_BASE, ws['uri_observations'])
+            self._update_server(uri, data)
+        if wss['next']:
+            self.update_weather_data('%s%s' % (URI_BASE,wss['next']))
+
+    def _fetch_weather_stations(self, uri):
+        response = urllib2.urlopen(uri)
+        return simplejson.load(response)
+
+
+    def _scrape(self, ws):
+        raise Exception('Abstract Method')
+
+    def _update_server(self, uri, data):
+        try:
+            json = simplejson.dumps(data)
+            # putting in the values will cause the request to be a POST
+            request = urllib2.Request(uri, json, {'Content-Type': 'application/json'})
+            response = urllib2.urlopen(request).read()
+        except urllib2.HTTPError, e:
+            logging.error('trying to post data: %s' % data)
+
+
+\end{lstlisting}
+
+We use \verb|cron| as the job scheduler. A table that runs the scraper each 20 minutes
+looks like the following:
+\begin{verbatim}
+0,20,40 * * * * /scraper.py
+\end{verbatim}
+After installing the table with \verb|crontab -e| in a Unix like environment
+weather observations are continuously updated for all the weather stations in the
+Web Service.
+
+\section{Forecasts}
+We stated earlier that there was no Swiss Army Knife for doing Web Scraping, this
+is even more true for retrieving the forecasts. 
+
+\subsection{Retrieving forecasts}
+The forecasts are quite large about 45 MB for a single forecast. This means a
+total download of 45 MB * (48 hours/ 3 hour interval) = 720 MB every 6 hours! 3
+fields (temperature, u wind component, v wind component) out of 250 are
+interesting for the application. It is possible to reduce the download to
+interesting data only. This is done by first downloading a small -- around 26KB
+-- inventory of the forecast; it specifies the content of the forecast and at
+which byte ranges the different content is located. This makes it possible to
+only fetch the parts we are interested in. A perl script that does this is
+available.\footnote{\url{http://www.cpc.noaa.gov/products/wesley/fast_downloading_grib.html}}
+
+A small shell script using perl scripts that downloads a subset of fields,
+now with a size under 1 Mb, looks as follows:
+\begin{verbatim}
+#!/bin/sh
+
+url=http://nomad3.ncep.noaa.gov/pub/gfs/rotating-0.5/gfs.t00z.pgrb2f00
+get_inv.pl "${url}.inv" | \
+egrep "(:UGRD:10 m above|:VGRD:10 m above|:TMP:surface)" | \
+get_grib.pl "${url}" pgb.grb  
+\end{verbatim}
+
+The NOAA server contains forecasts from four calculation runs which are
+circularly updated as the forecasts calculations are finished. The application
+keeps a local version of all forecasts files, and also updates them
+circularly. Local forecasts are updated when they are stale by comparing the last
+modified time -- found with a HTTP HEAD request -- of the remote files with the
+local files.\footnote{We note that we have changed the perl scripts in order to
+preserve the external time when downloading the forecasts.} In the application we
+check the last file in each run (since it is produced by NOAA after the other
+files in the run) and update all forecasts in the run if the last is stale. The
+updating logic checks last modification times twice every hour by a cronjob.
+
+\subsection{Extracting data from GRIB2 files}
+\verb|wgrib2|\footnote{wgrib is found at:
+\url{http://www.cpc.noaa.gov/products/wesley/wgrib2/}} is a program that
+retrieves data from GRIB2 files. \verb|wgrib2| supports extracting records
+out of a GRIB2 file based on latitude and longitude. We can type in the following
+command to get all data fields about Skagen from a GRIB2 file.
+
+\begin{verbatim}
+$ wgrib2 forecasts/gfs.t00z.pgrb2f00 -s -lon 10.59 57.7
+1:115:d=2009062700:TMP:2 m above ground:anl::lon=10.500000,
+    lat=57.500000,val=289.71
+2.1:180652:d=2009062700:UGRD:10 m above ground:anl::lon=10.500000,
+    lat=57.500000,val=-4.81
+2.2:180652:d=2009062700:VGRD:10 m above ground:anl::lon=10.500000,
+    lat=57.500000,val=-0.76
+\end{verbatim}
+
+The \verb|-lon| option gets values from a grid point closest to a specified
+point. The output shows the closest point, in this case it is (57.5,10.5),
+together with the value of the records.
+
+The values in the GRIB2 files are in a meteorological format not applicable for
+the users of the Weather Web Service.
+
+\subsubsection*{Temperature conversion}
+The temperature is reported in Kelvin; conversion: 
+\begin{math}
+[°C] = [K] - 273.15
+\end{math}
+
+\subsubsection*{Wind velocity conversion}
+The wind velocity forecast is a vector separated in two components \verb|u| and
+\verb|v|. \verb|u| is the zonal -- East-West -- component; if positive the wind
+is blowing to the East. \verb|v| is the meridional -- North-South -- component;
+if positive the wind is blowing to the North.
+
+Instead of the vectors the Web Service reports the wind speed and the
+meteorological wind direction; which is a value in the interval [0;360[ with
+respect to North (North=0), where the wind is coming from. The components are
+converted in Python, shown in Listing~\ref{lst:conversions}.
+
+\begin{lstlisting}[caption=Conversions in Python,label=lst:conversions]
+import math
+def toSpeed(u_component, v_component):
+    """Returns the norm of the vectors, i.d., the speed.
+    """
+    return math.hypot(u_component,v_component)
+    
+def toDirection(u_component, v_component):
+    degrees = math.degrees(math.atan2(-u_component, -v_component))
+    if(degrees < 0):
+        degrees += 360
+    return degrees
+\end{lstlisting}
+%
+\verb|u| and \verb|v| are negated since meteorological wind direction is where the
+wind is coming from instead of blowing to. \verb|atan2| returns an angle in the
+interval $[-\pi;\pi]$. To map this into $[0°;360°]$ we must add $360°$ to
+negative angles.
+
+\subsection{Integrating with the Web Service}
+A central function for the updating process is retrieving all future forecasts
+from files in the latest run. The function finds the latest run, comparing the
+last forecast in each run. All file names in a run is available in a sorted list;
+the time delta from the calculation time to the current utc time is used to slice
+away stale forecasts from the list. \verb|get_wind_forecast| uses \verb|wgrib2|
+on forecast files and returns weather data found with regular expression on the
+output from \verb|wgrib2|.
+
+\begin{lstlisting}
+URI_BASE = 'http://www.welovewind.com'
+URI_POINTS = 'http://www.welovewind.com/api/forecast_points/'
+
+def update_server(uri):
+    """PUT forecasts updates to server if the data at the server is stale.
+
+    """
+    forecast_points = _fetch_forecasts(uri)
+    for p in forecast_points['items']:
+        if not is_local_fresher(p):
+            continue
+        fp = forecasts.ForecastPoints(lat=p['lat'], lon=p['lon'], maximum=16)
+        if p['lat'] != fp.lat or p['lon'] != fp.lon:
+            raise Exception('lat/lon inconsistency')
+        uri = '%s%s?_method=PUT' % (URI_BASE, p['uri'])
+        representation = fp.to_json()
+        request = urllib2.Request(uri, representation, {'Content-Type': 'application/json'})
+        response = urllib2.urlopen(request).read()
+    if forecast_points['next']:
+        update_server('%s%s' % (URI_BASE, forecast_points['next']))
+
+def _fetch_forecasts(uri):
+    response = urllib2.urlopen('%s' % uri).read()
+    return simplejson.loads(response)
+\end{lstlisting}
+
+\section{Summary}
+In this chapter, we presented and used different types of Web scraping techniques
+to fetch data from external resources not meant for computer consumption. In
+addition, we presented logic to load data into the application on a continuous
+basis.

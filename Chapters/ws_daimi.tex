@@ -1,0 +1,144 @@
+\chapter{The DAIMI Forecast Web Service}\label{chap:ws_daimi}
+In the last chapter we described the We Love Wind Web Service. That service
+included external calls to another Web Service: The DAIMI Forecast Web Service, found
+at
+\begin{itemize}
+  \item \url{http://daimi.welovewind.com/}
+\end{itemize}
+There are important requirements in the application that demands an additional
+forecast Web Service:
+\begin{itemize}
+  \item it should be possible to get forecasts for arbitrary locations; and,
+  \item after creating new spots, the forecasts of the nearest forecast point
+  should be in place immediately. 
+\end{itemize}
+If the logic to get forecasts were placed on GAE, the requirements are
+trivial. The application is based on binary forecasts from NOAA. The decoding
+software is incompatible with GAE; the decoding of the binary forecast files
+demands that the decoding logic is placed elsewhere. It is infeasible to
+continuously update all forecast points -- ca. 260000 points -- therefore, the
+forecasts of points are only updated when relevant for surf spots, and that
+demands an extra service for forecasts. In essence, we are wrapping a modern Web
+Service around the binary forecasts files from NOAA.
+
+In this chapter we describe the implementation of a RESTful weather service with
+Python/CGI.\footnote{The Web Service is located at the department of computer
+science, Aarhus University; that left the author with two options for generating
+the dynamic output: PHP or CGI. To keep things consistent we implement the
+forecast service in a Python CGI script.} The focus of this chapter is on the
+implementation of the Web Service; we postpone the description of retrieving and
+converting weather data to the next part.
+
+The resource of the service is already defined: it is the forecast points
+resources described in Section~\vref{sec:res:forecast_points}. Therefore, we jump
+directly to the implementation; again described in terms of the MVC style.
+
+\section{Model}
+The forecast weather service contains a single model: the forecast point
+model. The purpose of the model is to encapsulate the access to the weather
+forecasts located in files. 
+
+\subsection*{Structure}
+The model contains three properties: the latitude and longitude of the point, and
+the forecasts of the point.
+
+\subsection*{Logic}
+The forecast point model is able to return a representation of itself in JSON
+format. The main method in the model is a class method that retrieves the current
+and all future forecast from the gfs files; since decoding forecasts from the
+forecast files takes about 0.5 seconds the method takes a maximum argument that
+reduces the number of returned forecasts.
+
+\section{Controller}
+ The controller is implemented as a Python/CGI script. CGI is a standard that
+connects a server with any programming language. Responses are crafted by
+printing the headers of the HTTP response which must include a
+\verb|content-type| header, the header is ended with an empty line and after that
+the program prints the body of the response.
+
+Listing~\ref{lst:cgi_forecast_point_controller} shows the
+controller. \verb|handle_request| is the entry method; it starts by extracting
+the parameters of the request. The values of those parameters are later given to
+an external shell program as arguments; therefore, the parameters are sanitized
+and parsed as floats avoiding security issues. If any error occur during this
+process the response signals the error with a HTTP 400 Bad Request. Secondly, the
+extracted parameters are given to the model which populates itself with forecast
+data according to the arguments. Finally, if caching does not apply the forecast
+point is printed in JSON format. 
+
+\begin{lstlisting}[caption=Forecast point CGI controller, label=lst:cgi_forecast_point_controller]
+def handle_request():
+    try:
+        params = extract_params()
+        if not params:
+            print_intro()
+            return
+        forecasts = ForecastPoints(**params)
+        if etag_match(forecasts):
+            not_modified_304()
+            return
+        print_forecasts(forecasts)
+    except (ValueError, IndexError):
+        print_intro(400)
+
+def extract_params():
+    input = os.environ.get('REDIRECT_QUERY_STRING')
+    lat, lon, maximum = None, None, 3 # maximum 3 if not specified
+    if input:
+        input = input.strip('/').split(',')
+        lat = float(input[0])
+        lon = float(input[1])
+        if lat < -90.0 or lat > 90.0 or lon < -180.0 or lon > 180.0:
+            raise ValueError
+        match = re.search(r'max=(\d+)', os.environ.get('REQUEST_URI'))
+        if match:
+            maximum = int(match.group(1))
+        return {'lat':lat, 'lon':lon, 'maximum':maximum}
+    else:
+        return None
+
+def print_intro(status=None):
+    print 'Content-type: text/plain'
+    if status:
+        print 'Status: %s' % status
+    print
+    print 'Welcome to the DAIMI Weather Forecasts Service'
+    print 'forecasts are accessed by ..forecasts/{lat},{lon}'
+    print 'the number of returned forecast is specified by setting the max query parameter: ../?max=10'
+
+def print_forecasts(forecasts):
+    print 'Content-type: text/plain'
+    print 'ETag: %s' % forecasts.last_modified()
+    print
+    print forecasts.to_json()
+
+def not_modified_304():
+    print 'Status: 304 Not Modified'
+    print
+
+def etag_match(forecasts):
+    etag = os.environ.get('HTTP_IF_NONE_MATCH')
+    if etag:
+        if forecasts.last_modified() == etag:
+            return True
+    return False
+
+handle_request()  
+\end{lstlisting}
+
+\section{Summary}
+In this chapter, we described the implementation of a forecast Web Service. We
+designed two Web Services since NOAA forecasts was incompatible with GAE. At the
+time of implementation the GAE lacked support for cron jobs, offline processing,
+and Java. All the necessary components are now in place\footnote{Offline
+processing of tasks is still experimental on GAE.} making a future solution that
+is more clean and effective possible. Java is needed since there are limited
+options to decode GRIB2 files: the unidata Java decoder
+tools\footnote{\url{http://www.unidata.ucar.edu/software/decoders/}},
+\verb|wgrib2|, and
+\verb|pygrib2|\footnote{\url{http://pygrib2.googlecode.com/}}. The latter two are
+incompatible with GAE since they are based on \verb|C| modules.
+
+This ends the description of the Web Services (or the server-side) of the We Love
+Wind mashup. In the following chapters we turn to the clients of those Web
+Services.

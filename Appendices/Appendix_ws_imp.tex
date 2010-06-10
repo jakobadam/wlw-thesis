@@ -1,0 +1,60 @@
+\chapter{Appendix}
+\label{app:ws_imp}
+
+\section{Python Implementation of Unique Datastore Property}
+Listing~\ref{lst:unique_prop_model} shows the implementation and an example of
+the usage of a unique property model. The class is inspired by a method to
+retrieve or create an object by its unique
+properties\footnote{http://appengine-cookbook.appspot.com/recipe/get-or-insert-entity-by-unique-properties/}.
+As the listing shows the unique property model is used by inheriting from it; the
+sub model gets an extra classmethod, the \verb|update_or_init_by| method. The
+method updates or initializes a model depending on the existence of the unique
+properties given as arguments. The model does not guarantee uniqueness in a
+concurrent environment.
+
+It is not possible to run the code in a transaction since it does queries, which
+are prohibited in transactions; the constraints of transactions are described
+in~\cite{Google:transactions}. 
+
+\begin{lstlisting}[label=lst:unique_prop_model,caption=Unique property model]
+  
+class UniquePropertyModel(db.Model):
+    
+    @classmethod
+    def update_or_init_by(cls, unique_props={}, **kwargs):
+        '''Update / initialize an entity.
+                
+        The entity is not saved in the datastore by this method.
+        
+        Args:
+            unique_props: dict with string / object pairs to apply filters on
+            kwds: properties to initialize / update
+        Returns:
+            the updated / new entity
+        '''
+        query = db.Query(cls)
+        # find the entity by the unique props
+        for p in unique_props:
+            query.filter("%s =" % p, unique_props[p])
+        entity = query.get()
+        # if entity exist, update it
+        if entity is not None:
+            for kw in kwds:
+                setattr(entity, kw, kwds[kw])
+            return entity
+        # init the entity, add props from unique props
+        kwds.update(unique_props)
+        entity = cls(**kwds)
+        return entity
+
+class ExampleModel(UniquePropertyModel):
+  name = db.StringProperty()
+  email = db.StringProperty()
+
+instance = ExampleModel.update_or_init_by(
+  {'email':'test@example.com'}, 
+  name='test name')
+instance.put()
+\end{lstlisting}     
+        
+

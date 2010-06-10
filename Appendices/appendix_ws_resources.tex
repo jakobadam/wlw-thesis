@@ -1,0 +1,146 @@
+\chapter{Appendix C}
+\label{AppendixHaversine}
+
+\section{Comparing Distances Calculated with Haversine and Cosines}
+
+\begin{lstlisting}
+def distance_cosines_relation(point1, point2):
+    '''Calculates the distance between two points, using the spheric cosines formula.
+    '''
+    lat1,lon1 = to_radians(point1)
+    lat2,lon2 = to_radians(point2)
+    a = sin(lat1) * sin(lat2)
+    b = cos(lat1) * cos(lat2) * cos(lon2 - lon1)
+    c = acos(a + b)
+    d = earth_radius * c
+    return d  
+\end{lstlisting}
+
+\begin{lstlisting}
+class Point:
+    def __init__(self,lat,lon):
+        self.lat = lat
+        self.lon = lon
+
+def compare():
+    class Point:
+        def __init__(self,lat,lon):
+            self.lat = lat
+            self.lon = lon
+    aarhus = Point(56.0,10.0)
+    aalborg = Point(57.0, 10.0)
+    for i in range(25):
+        # distances in m
+        cosines_distance = distance_cosines_relation(aarhus, aalborg)
+        haversine_distance = distance(aarhus, aalborg)
+        difference = cosines_distance - haversine_distance
+        print 'P2: (%s,%s)\nHDist: %sm\tCDist:%sm\nDiff:%sm' % \
+            (aalborg.lat, aalborg.lon, 
+            haversine_distance * 1000, cosines_distance * 1000, difference * 1000)
+        print '---------'
+        # half distance
+        aalborg.lat = aarhus.lat + (aalborg.lat - aarhus.lat) / 2      
+\end{lstlisting}
+
+\begin{lstlisting}
+P2: (57.0,10.0)
+HDist: 111125.113474m	CDist:111125.113474m
+Diff:-1.12549969344e-008m
+---------
+P2: (56.5,10.0)
+HDist: 55562.5567372m	CDist:55562.5567371m
+Diff:-9.63567003964e-008m
+---------
+P2: (56.25,10.0)
+HDist: 27781.2783686m	CDist:27781.2783686m
+Diff:-5.07327513333e-009m
+---------
+P2: (56.125,10.0)
+HDist: 13890.6391843m	CDist:13890.6391843m
+Diff:3.37667671602e-008m
+---------
+P2: (56.0625,10.0)
+HDist: 6945.31959215m	CDist:6945.31959159m
+Diff:-5.66108049327e-007m
+---------
+P2: (56.03125,10.0)
+HDist: 3472.65979608m	CDist:3472.65979594m
+Diff:-1.33233424293e-007m
+---------
+P2: (56.015625,10.0)
+HDist: 1736.32989804m	CDist:1736.32989803m
+Diff:-7.03592739626e-009m
+---------
+P2: (56.0078125,10.0)
+HDist: 868.164949019m	CDist:868.164945702m
+Diff:-3.31756488947e-006m
+---------
+P2: (56.00390625,10.0)
+HDist: 434.08247451m	CDist:434.082477783m
+Diff:3.27316213022e-006m
+---------
+P2: (56.001953125,10.0)
+HDist: 217.041237255m	CDist:217.041228492m
+Diff:-8.76289446561e-006m
+---------
+P2: (56.0009765625,10.0)
+HDist: 108.520618627m	CDist:108.520583137m
+Diff:-3.54903024608e-005m
+---------
+P2: (56.0004882813,10.0)
+HDist: 54.2603093133m	CDist:54.2602708314m
+Diff:-3.84819070012e-005m
+---------
+P2: (56.0002441406,10.0)
+HDist: 27.1301546566m	CDist:27.1301354156m
+Diff:-1.9241015066e-005m
+---------
+P2: (56.0001220703,10.0)
+HDist: 13.565077328m	CDist:13.5649018138m
+Diff:-0.0001755141407m
+---------
+P2: (56.0000610352,10.0)
+HDist: 6.78253866398m	CDist:6.78211910881m
+Diff:-0.00041955517375m
+---------
+P2: (56.0000305176,10.0)
+HDist: 3.39126933199m	CDist:3.39039587702m
+Diff:-0.000873454969691m
+---------
+P2: (56.0000152588,10.0)
+HDist: 1.69563466564m	CDist:1.69453406618m
+Diff:-0.00110059946489m
+---------
+P2: (56.0000076294,10.0)
+HDist: 0.847817332821m	CDist:0.848593998715m
+Diff:0.000776665893623m
+---------
+P2: (56.0000038147,10.0)
+HDist: 0.423908666057m	CDist:0.413553559386m
+Diff:-0.0103551066715m
+---------
+P2: (56.0000019073,10.0)
+HDist: 0.211954333029m	CDist:0.212148499679m
+Diff:0.000194166650125m
+---------
+P2: (56.0000009537,10.0)
+HDist: 0.105977166514m	CDist:0.0948756933212m
+Diff:-0.0111014731931m
+---------
+P2: (56.0000004768,10.0)
+HDist: 0.0529885829037m	CDist:0.0m
+Diff:-0.0529885829037m
+---------
+P2: (56.0000002384,10.0)
+HDist: 0.0264942914519m	CDist:0.0m
+Diff:-0.0264942914519m
+---------
+P2: (56.0000001192,10.0)
+HDist: 0.0132471457259m	CDist:0.0m
+Diff:-0.0132471457259m
+---------
+P2: (56.0000000596,10.0)
+HDist: 0.00662357286296m CDist:0.0m
+Diff:-0.00662357286296m
+---------
+\end{lstlisting}
